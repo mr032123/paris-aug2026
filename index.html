@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Paris 2026 — Aug 7–11</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+  :root{
+    --ink:#1f2a2e; --ink-soft:#3c4a4f; --cream:#f6f1e7; --cream-2:#efe7d6;
+    --paper:#fbf8f1; --brass:#b08a3e; --brass-2:#caa75e; --teal:#1f6f6b;
+    --rose:#9c5b53; --line:#ddd2bd; --muted:#8a8170;
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{margin:0; background:var(--cream); color:var(--ink);
+    font-family:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif; line-height:1.55;}
+  a{color:var(--teal); text-decoration:none; border-bottom:1px solid rgba(31,111,107,.3);}
+  a:hover{border-bottom-color:var(--teal);}
+
+  header.masthead{background:var(--ink); color:var(--cream); padding:34px 24px 26px; text-align:center; border-bottom:4px solid var(--brass);}
+  .masthead .eyebrow{letter-spacing:.34em; text-transform:uppercase; font-size:12px; color:var(--brass-2); font-family:Helvetica,Arial,sans-serif;}
+  .masthead h1{margin:.25em 0 .15em; font-size:38px; font-weight:600; letter-spacing:.02em;}
+  .masthead .sub{color:#cfd6d3; font-size:15px;}
+  .masthead .party{margin-top:10px; font-size:13px; color:#aeb8b4; font-family:Helvetica,Arial,sans-serif;}
+
+  nav.daynav{position:sticky; top:0; z-index:1000; background:var(--paper); border-bottom:1px solid var(--line);
+    display:flex; flex-wrap:wrap; gap:6px; justify-content:center; padding:10px 12px; box-shadow:0 2px 10px rgba(0,0,0,.05);}
+  nav.daynav a{font-family:Helvetica,Arial,sans-serif; font-size:12.5px; letter-spacing:.04em; color:var(--ink-soft);
+    border:1px solid var(--line); border-radius:999px; padding:6px 13px; background:#fff;}
+  nav.daynav a:hover{background:var(--ink); color:var(--cream); border-color:var(--ink);}
+
+  .wrap{max-width:1180px; margin:0 auto; padding:0 20px;}
+
+  .legend{display:flex; flex-wrap:wrap; gap:14px; justify-content:center; padding:18px 12px 4px; font-family:Helvetica,Arial,sans-serif; font-size:12px; color:var(--ink-soft);}
+  .legend .tag{display:inline-flex; align-items:center; gap:6px;}
+  .pill{display:inline-block; font-family:Helvetica,Arial,sans-serif; font-size:10.5px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; padding:3px 9px; border-radius:999px; color:#fff; white-space:nowrap;}
+  .pill.fixed{background:var(--brass);}
+  .pill.book{background:var(--rose);}
+  .pill.flex{background:var(--teal);}
+  .pill.optional{background:#a59b86;}
+  .pill.transit{background:var(--ink-soft);}
+
+  section.day{padding:30px 0 10px; border-top:1px solid var(--line); margin-top:18px;}
+  .day-head{display:flex; align-items:baseline; gap:14px; flex-wrap:wrap; margin-bottom:4px;}
+  .day-head .num{font-family:Helvetica,Arial,sans-serif; font-size:12px; letter-spacing:.2em; color:var(--brass); text-transform:uppercase;}
+  .day-head h2{margin:0; font-size:27px; font-weight:600;}
+  .day-head .dow{color:var(--muted); font-size:16px;}
+  .day-summary{color:var(--ink-soft); font-size:15px; margin:2px 0 20px; font-style:italic;}
+
+  .day-grid{display:grid; grid-template-columns:1fr 360px; gap:22px; align-items:start;}
+  .day-map{position:sticky; top:64px;}
+  .lmap{height:520px; border-radius:12px; border:1px solid var(--line); overflow:hidden; background:#e8e4d8;}
+  .maphint{font-family:Helvetica,Arial,sans-serif; font-size:11px; color:var(--muted); text-align:center; margin-top:7px;}
+  .leaflet-popup-content{font-family:Helvetica,Arial,sans-serif; font-size:12.5px;}
+
+  .block{margin:0 0 16px; background:var(--paper); border:1px solid var(--line); border-radius:12px; overflow:hidden;}
+  .block-head{display:flex; align-items:center; gap:10px; padding:11px 18px; background:var(--cream-2); border-bottom:1px solid var(--line);}
+  .block-head .pod{font-family:Helvetica,Arial,sans-serif; font-size:12px; font-weight:700; letter-spacing:.18em; text-transform:uppercase; color:var(--ink);}
+  .block-head .pod .clock{color:var(--muted); font-weight:400; letter-spacing:.04em; margin-left:6px;}
+
+  .item{display:grid; grid-template-columns:150px 1fr; gap:16px; padding:16px; border-bottom:1px dashed var(--line);}
+  .item:last-child{border-bottom:none;}
+  .item .media{position:relative; height:110px; border-radius:9px; overflow:hidden; background:#ddd; border:1px solid var(--line);}
+  .item .media img{width:100%; height:100%; object-fit:cover; display:block;}
+  .item .media .ph{position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; color:#fff; padding:8px;}
+  .item .media .ph .glyph{font-size:28px; line-height:1; filter:drop-shadow(0 1px 2px rgba(0,0,0,.3));}
+  .item .media .ph .lbl{font-family:Helvetica,Arial,sans-serif; font-size:10px; letter-spacing:.05em; margin-top:6px; opacity:.92;}
+  .g-glass{background:linear-gradient(135deg,#1f6f6b,#0e3b3a);}
+  .g-doge{background:linear-gradient(135deg,#7a5a8c,#3a2747);}
+  .g-row{background:linear-gradient(135deg,#2f7fae,#163a52);}
+  .g-ghetto{background:linear-gradient(135deg,#9c7b3e,#4a3818);}
+  .g-mask{background:linear-gradient(135deg,#b0563f,#5a2419);}
+  .g-boat{background:linear-gradient(135deg,#3a7e7a,#16332f);}
+  .g-dine{background:linear-gradient(135deg,#a07b4e,#4a3320);}
+  .g-walk{background:linear-gradient(135deg,#6f7d6a,#33402f);}
+  .g-train{background:linear-gradient(135deg,#5a6470,#2c333c);}
+
+  .item .body h3{margin:0 0 5px; font-size:17px; font-weight:600;}
+  .item .body .meta{font-family:Helvetica,Arial,sans-serif; font-size:12px; color:var(--muted); margin:0 0 8px; display:flex; flex-wrap:wrap; gap:8px 14px; align-items:center;}
+  .item .body p{margin:0 0 8px; font-size:14px; color:var(--ink-soft);}
+  .item .body .line{font-size:13px; margin:5px 0 0;}
+  .item .body .line b{font-family:Helvetica,Arial,sans-serif; font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--brass); margin-right:6px;}
+  .item .body .eat{background:#fff; border:1px solid var(--line); border-left:3px solid var(--teal); border-radius:6px; padding:8px 11px; margin-top:10px; font-size:13px;}
+  .item .body .eat b{font-family:Helvetica,Arial,sans-serif; font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--teal);}
+
+  .mapnote{background:var(--ink); color:var(--cream); border-radius:14px; padding:26px; text-align:center; margin:26px 0 40px;}
+  .mapnote .eyebrow{letter-spacing:.3em; text-transform:uppercase; font-size:11px; color:var(--brass-2); font-family:Helvetica,Arial,sans-serif;}
+  .mapnote h2{margin:.3em 0; font-size:22px;}
+  .mapnote p{color:#c2cbc7; font-size:14px; max-width:640px; margin:8px auto 0;}
+
+  footer{text-align:center; padding:26px 20px 40px; color:var(--muted); font-size:12.5px; font-family:Helvetica,Arial,sans-serif;}
+  .updated{font-style:italic;}
+
+  @media(max-width:900px){
+    .day-grid{grid-template-columns:1fr;}
+    .day-map{position:static;}
+    .lmap{height:300px;}
+  }
+  @media(max-width:640px){ .item{grid-template-columns:1fr;} .item .media{height:170px;} .masthead h1{font-size:30px;} }
+</style>
+</head>
+<body>
+
+<header class="masthead">
+  <div class="eyebrow">Paris · August 2026</div>
+  <h1>Paris</h1>
+  <div class="sub">Park Hyatt Paris-Vendôme · Aug 7–11</div>
+  <div class="party">Mims · Sara · Etta (13)</div>
+</header>
+
+<nav class="daynav">
+  <a href="#d7">Fri 7 · Vendôme loop</a>
+  <a href="#d8">Sat 8 · Class + Flea</a>
+  <a href="#d9">Sun 9 · Marais</a>
+  <a href="#d10">Mon 10 · Rive Gauche</a>
+  <a href="#d11">Tue 11 · Montaigne</a>
+  <a href="#vintage">Vintage map</a>
+</nav>
+
+<div class="wrap">
+
+  <div class="legend">
+    <span class="tag"><span class="pill fixed">Fixed time</span></span>
+    <span class="tag"><span class="pill book">Book ahead</span></span>
+    <span class="tag"><span class="pill flex">Flexible / pop-in</span></span>
+    <span class="tag"><span class="pill optional">Optional</span></span>
+  </div>
+
+  <!-- ============ FRI ============ -->
+  <section class="day" id="d7">
+    <div class="day-head"><span class="num">Day 1</span><h2>August 7</h2><span class="dow">Friday · Arrival &amp; the Vendôme loop</span></div>
+    <p class="day-summary">Land, settle, then one easy walking loop right around the hotel — library, arcade, kitchenware, food street. No dinner booked; pop in as the mood strikes.</p>
+    <div class="day-grid">
+      <div class="day-main">
+        <div class="block">
+          <div class="block-head"><span class="pod">Afternoon<span class="clock">· near the hotel (1st/2nd)</span></span></div>
+          <div class="item">
+            <div class="media"><img loading="lazy" src="https://upload.wikimedia.org/wikipedia/commons/thumb/4/44/La_salle_ovale_du_site_Richelieu%2C_Biblioth%C3%A8que_nationale_de_France%2C_Paris_2022.jpg/1280px-La_salle_ovale_du_site_Richelieu%2C_Biblioth%C3%A8que_nationale_de_France%2C_Paris_2022.jpg" alt="Salle Ovale, Bibliothèque Richelieu" data-g="g-doge" data-glyph="📚" data-lbl="Bibliothèque Richelieu"></div>
+            <div class="body">
+              <h3>Bibliothèque nationale — site Richelieu <span style="font-weight:400;color:var(--muted);font-size:14px;">(Mims's must)</span></h3>
+              <div class="meta"><span class="pill optional">Quick &amp; free</span><span>closed Mondays</span></div>
+              <p>The jaw-dropping Salle Ovale (Oval Room) is free to walk into — a low-effort, high-reward first stop, five minutes from the hotel.</p>
+              <p class="line"><b>Map</b><a href="https://www.google.com/maps/search/?api=1&query=Biblioth%C3%A8que%20Richelieu%20Paris" target="_blank">58 rue de Richelieu</a></p>
+            </div>
+          </div>
+          <div class="item">
+            <div class="media"><img loading="lazy" src="https://upload.wikimedia.org/wikipedia/commons/thumb/b/b0/GalerieVivienne1.jpg/1280px-GalerieVivienne1.jpg" alt="Galerie Vivienne" data-g="g-dine" data-glyph="🏛️" data-lbl="Galerie Vivienne"></div>
+            <div class="body">
+              <h3>Galerie Vivienne</h3>
+              <div class="meta"><span class="pill optional">Arcade</span><span>1823, glass-roofed</span></div>
+              <p>Paris's prettiest covered passage, next door to Richelieu — boutiques and mosaics. La Marelle (consignment) is here; Valois vintage is a block away at the Palais-Royal.</p>
+              <p class="line"><b>Map</b><a href="https://www.google.com/maps/search/?api=1&query=Galerie%20Vivienne%20Paris" target="_blank">Galerie Vivienne</a></p>
+            </div>
+          </div>
+          <div class="item">
+            <div class="media noimg g-glass"><div class="ph"><div class="glyph">🍳</div><div class="lbl">E. Dehillerin</div></div></div>
+            <div class="body">
+              <h3>E. Dehillerin</h3>
+              <div class="meta"><span class="pill optional">Since 1820</span><span>near Les Halles</span></div>
+              <p>The legendary professional kitchenware shop — walls of copper pots and every tool imaginable. A short walk on from the arcade.</p>
+              <p class="line"><b>Map</b><a href="https://www.google.com/maps/search/?api=1&query=E.%20Dehillerin%20Paris" target="_blank">18–20 rue Coquillière</a></p>
+            </div>
+          </div>
+          <div class="item">
+            <div class="media"><img loading="lazy" src="https://upload.wikimedia.org/wikipedia/commons/thumb/c/c1/RueMontorgueil.JPG/1280px-RueMontorgueil.JPG" alt="Rue Montorgueil" data-g="g-walk" data-glyph="🥖" data-lbl="Rue du Nil"></div>
+            <div class="body">
+              <h3>Rue du Nil &amp; Montorgueil</h3>
+              <div class="meta"><span class="pill optional">Food street</span></div>
+              <p>Terroirs d'Avenir's little food shops and the Frenchie block. Loop back via rue Montorgueil and pop into <strong>Stohrer</strong>, Paris's oldest pâtisserie (1730).</p>
+              <p class="line"><b>Map</b><a href="https://www.google.com/maps/search/?api=1&query=Rue%20du%20Nil%20Paris" target="_blank">Rue du Nil</a> · <a href="https://www.google.com/maps/search/?api=1&query=Stohrer%20Paris" target="_blank">Stohrer</a></p>
+            </div>
+          </div>
+        </div>
+
+        <div class="block">
+          <div class="block-head"><span class="pod">Eat<span class="clock">· flexible, no bookings</span></span></div>
+          <div class="item">
+            <div class="media"><img loading="lazy" src="https://upload.wikimedia.org/wikipedia/commons/thumb/6/69/Caf%C3%A9_de_Flore%2C_172_boulevard_Saint-Germain%2C_Paris_6e.jpg/1280px-Caf%C3%A9_de_Flore%2C_172_boulevard_Saint-Germain%2C_Paris_6e.jpg" alt="Paris café" data-g="g-boat" data-glyph="🍽️" data-lbl="Pop-in shortlist"></div>
+            <div class="body">
+              <h3>Lunch / coffee / dinner — decide on the day</h3>
+              <div class="meta"><span class="pill flex">Vetted, walkable, no reservation</span></div>
+              <p><strong>Kunitoraya</strong> (excellent udon) · <strong>Racines</strong> (Italian/pasta, Passage des Panoramas) · <strong>Le Grand Colbert</strong> or <strong>Bistrot Vivienne</strong> (classic brasserie in the arcade) · <strong>Frenchie To Go</strong> (rue du Nil, casual). Coffee at <strong>Café Verlet</strong>; sweets at <strong>Stohrer</strong>.</p>
+              <p class="line"><b>Optional</b>Printemps / Galeries Lafayette (Bd Haussmann, ~10 min north) — only if there's a spare hour.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <aside class="day-map"><div id="mapFri" class="lmap"></div><div class="maphint">Pins are approximate — tap a card's Map link for the exact address.</div></aside>
+    </div>
+  </section>
+
+  <!-- ============ SAT ============ -->
+  <section class="day" id="d8">
+    <div class="day-head"><span class="num">Day 2</span><h2>August 8</h2><span class="dow">Saturday · Baking class + flea markets</span></div>
+    <p class="day-summary">Sara &amp; Etta bake at Concorde while Mims heads to the flea; regroup at the Puces, then dinner at Le Voltaire.</p>
+    <div class="day-grid">
+      <div class="day-main">
+        <div class="block">
+          <div class="block-head"><span class="pod">Morning<span class="clock">· 10:00 AM</span></span></div>
+          <div class="item">
+            <div class="media"><img loading="lazy" src="https://upload.wikimedia.org/wikipedia/commons/thumb/7/70/Raspberry_tart.jpg/1280px-Raspberry_tart.jpg" alt="Fruit tart" data-g="g-mask" data-glyph="🧁" data-lbl="Cordon Bleu class"></div>
+            <div class="body">
+              <h3>Le Cordon Bleu — kids' pastry workshop (Sara &amp; Etta)</h3>
+              <div class="meta"><span class="pill fixed">10:00–12:00</span><span class="pill book">Book</span><span>Hôtel de la Marine, Concorde</span></div>
+              <p>A parent-child pastry workshop at the Hôtel de la Marine, ~10 min from the hotel. This Saturday's recipe is a seasonal fruit tart. Etta (13) can join Sara or, with a consent form, go solo.</p>
+              <p class="line"><b>Book</b><a href="https://www.cordonbleu.edu/paris-hoteldelamarine/child-workshop/en" target="_blank">cordonbleu.edu</a></p>
+            </div>
+          </div>
+          <div class="item">
+            <div class="media"><img loading="lazy" src="https://upload.wikimedia.org/wikipedia/commons/thumb/d/d1/Enseignes_Puces_Saint-Ouen.jpg/1280px-Enseignes_Puces_Saint-Ouen.jpg" alt="Puces de Saint-Ouen" data-g="g-ghetto" data-glyph="🛍️" data-lbl="Puces de Saint-Ouen"></div>
+            <div class="body">
+              <h3>Puces de Saint-Ouen (Clignancourt)</h3>
+              <div class="meta"><span class="pill flex">Open Sat–Mon</span><span>they join ~12:45</span></div>
+              <p>Mims goes ahead to the world's great flea market — antiques, vintage, and design across the covered markets (Vernaisson, Dauphine, Paul Bert Serpette). Sara &amp; Etta join after class.</p>
+              <p class="line"><b>Map</b><a href="https://www.google.com/maps/search/?api=1&query=Puces%20de%20Saint-Ouen%20Paul%20Bert%20Serpette" target="_blank">Marché Paul Bert Serpette</a></p>
+              <div class="eat"><b>Lunch</b> &nbsp;In the market: <strong>Ma Cocotte</strong> (Starck) or <strong>La Chope des Puces</strong>. Flexible, no booking.</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="block">
+          <div class="block-head"><span class="pod">Evening</span></div>
+          <div class="item">
+            <div class="media noimg g-row"><div class="ph"><div class="glyph">🍽️</div><div class="lbl">Le Voltaire</div></div></div>
+            <div class="body">
+              <h3>Le Voltaire</h3>
+              <div class="meta"><span class="pill book">Book</span><span>7th · quai Voltaire</span><span>classic, fish</span></div>
+              <p>Quintessential Rive Gauche — an iconic, chic riverside bistro. Fish and vegetables done beautifully; a lovely place to land after the flea.</p>
+              <p class="line"><b>Dress</b>No formal code, but a dressy, old-money room — smart attire, skip sneakers/shorts.</p>
+              <p class="line"><b>Map</b><a href="https://www.google.com/maps/search/?api=1&query=Le%20Voltaire%20restaurant%20quai%20Voltaire" target="_blank">27 quai Voltaire</a></p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <aside class="day-map"><div id="mapSat" class="lmap"></div><div class="maphint">Spread out today: class at Concorde, flea to the north, dinner on the Left Bank.</div></aside>
+    </div>
+  </section>
+
+  <!-- ============ SUN ============ -->
+  <section class="day" id="d9">
+    <div class="day-head"><span class="num">Day 3</span><h2>August 9</h2><span class="dow">Sunday · Le Marais</span></div>
+    <p class="day-summary">Brunch, then the Marais's shopping, vintage, and museums — the one day they're all open.</p>
+    <div class="day-grid">
+      <div class="day-main">
+        <div class="block">
+          <div class="block-head"><span class="pod">Late morning<span class="clock">· 12:00 PM</span></span></div>
+          <div class="item">
+            <div class="media"><img loading="lazy" src="https://upload.wikimedia.org/wikipedia/commons/thumb/1/18/Shakshuka_by_Calliopejen1.jpg/1280px-Shakshuka_by_Calliopejen1.jpg" alt="Shakshuka" data-g="g-dine" data-glyph="🍳" data-lbl="Tekés brunch"></div>
+            <div class="body">
+              <h3>Tekés — Sunday brunch</h3>
+              <div class="meta"><span class="pill book">Book</span><span>12–3</span><span>all-vegetarian</span></div>
+              <p>Assaf Granit's vegetarian Levantine spot — shakshuka, hummus, babka, shared plates and great vibes. A 10-min walk to the Marais, and it dodges the no-shellfish/no-steak rule entirely.</p>
+              <p class="line"><b>Dress</b>Relaxed and lively — casual is fine.</p>
+              <p class="line"><b>Map</b><a href="https://www.google.com/maps/search/?api=1&query=Tekes%20restaurant%20Paris" target="_blank">4bis rue Saint-Sauveur</a></p>
+            </div>
+          </div>
+        </div>
+
+        <div class="block">
+          <div class="block-head"><span class="pod">Afternoon<span class="clock">· Le Marais (3rd/4th)</span></span></div>
+          <div class="item">
+            <div class="media"><img loading="lazy" src="https://upload.wikimedia.org/wikipedia/commons/thumb/d/d3/Paris_Hotel_de_Sens_dsc04028.jpg/1280px-Paris_Hotel_de_Sens_dsc04028.jpg" alt="Le Marais" data-g="g-walk" data-glyph="🛍️" data-lbl="Marais shopping"></div>
+            <div class="body">
+              <h3>Marais shopping &amp; vintage</h3>
+              <div class="meta"><span class="pill flex">Open Sundays</span></div>
+              <p>Independent boutiques and the Marais's strong vintage/consignment — plus <strong>BHV</strong> (the big department store by Hôtel de Ville) and the <strong>Sandro outlet</strong> on rue de Sévigné. The Broken Arm and more vintage are here; see the vintage map for the full plot.</p>
+              <p class="line"><b>Map</b><a href="https://www.google.com/maps/search/?api=1&query=BHV%20Marais%20Paris" target="_blank">BHV</a> · <a href="https://www.google.com/maps/search/?api=1&query=Sandro%20outlet%20rue%20de%20S%C3%A9vign%C3%A9%20Paris" target="_blank">Sandro outlet</a></p>
+            </div>
+          </div>
+          <div class="item">
+            <div class="media"><img loading="lazy" src="https://upload.wikimedia.org/wikipedia/commons/thumb/c/c7/Musee_de_la_Chasse_et_de_la_Nature_signage.jpg/1280px-Musee_de_la_Chasse_et_de_la_Nature_signage.jpg" alt="Musée de la Chasse et de la Nature" data-g="g-doge" data-glyph="🖼️" data-lbl="Marais museums"></div>
+            <div class="body">
+              <h3>Museums — all open Sunday (closed Mondays)</h3>
+              <div class="meta"><span class="pill optional">Pick 1–2</span></div>
+              <p><strong>Musée de la Chasse et de la Nature</strong> (quirky, beautiful), <strong>Carnavalet</strong> (Paris history, free), <strong>Picasso</strong>. Sunday is the only day they line up with the Marais.</p>
+              <p class="line"><b>Map</b><a href="https://www.google.com/maps/search/?api=1&query=Mus%C3%A9e%20de%20la%20Chasse%20et%20de%20la%20Nature" target="_blank">Chasse &amp; Nature</a> · <a href="https://www.google.com/maps/search/?api=1&query=Mus%C3%A9e%20Carnavalet" target="_blank">Carnavalet</a> · <a href="https://www.google.com/maps/search/?api=1&query=Mus%C3%A9e%20Picasso%20Paris" target="_blank">Picasso</a></p>
+            </div>
+          </div>
+        </div>
+
+        <div class="block">
+          <div class="block-head"><span class="pod">Evening</span></div>
+          <div class="item">
+            <div class="media noimg g-mask"><div class="ph"><div class="glyph">🕯️</div><div class="lbl">Kavod</div></div></div>
+            <div class="body">
+              <h3>Kavod — kosher dinner</h3>
+              <div class="meta"><span class="pill book">Book</span><span>8th · kosher</span></div>
+              <p>The Sunday kosher dinner, in the 8th near the Champs-Élysées — we travel for it, and that's fine.</p>
+              <p class="line"><b>Dress</b>Casual.</p>
+              <p class="line"><b>Map</b><a href="https://www.google.com/maps/search/?api=1&query=26%20Rue%20Jean%20Mermoz%2075008%20Paris" target="_blank">26 rue Jean Mermoz, 75008</a></p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <aside class="day-map"><div id="mapSun" class="lmap"></div><div class="maphint">Dinner (Kavod) is over in the 8th, so the view is wider. Tap a Map link for exact addresses.</div></aside>
+    </div>
+  </section>
+
+  <!-- ============ MON ============ -->
+  <section class="day" id="d10">
+    <div class="day-head"><span class="num">Day 4</span><h2>August 10</h2><span class="dow">Monday · Rive Gauche</span></div>
+    <p class="day-summary">Bon Marché + Grande Épicerie, Hermès on the Left Bank, art and vintage, ending the evening at Le Monteverdi.</p>
+    <div class="day-grid">
+      <div class="day-main">
+        <div class="block">
+          <div class="block-head"><span class="pod">Day<span class="clock">· 6th / 7th</span></span></div>
+          <div class="item">
+            <div class="media"><img loading="lazy" src="https://upload.wikimedia.org/wikipedia/commons/thumb/3/33/Bon_march%C3%A9_%2851695577518%29.jpg/1280px-Bon_march%C3%A9_%2851695577518%29.jpg" alt="Le Bon Marché" data-g="g-ghetto" data-glyph="🛍️" data-lbl="Le Bon Marché"></div>
+            <div class="body">
+              <h3>Le Bon Marché &amp; La Grande Épicerie</h3>
+              <div class="meta"><span class="pill flex">Open Mondays</span></div>
+              <p>The Left Bank's grande dame department store, and next door the Grande Épicerie food hall (a great flexible-lunch option in itself).</p>
+              <p class="line"><b>Map</b><a href="https://www.google.com/maps/search/?api=1&query=Le%20Bon%20March%C3%A9%20Paris" target="_blank">24 rue de Sèvres</a></p>
+            </div>
+          </div>
+          <div class="item">
+            <div class="media noimg g-mask"><div class="ph"><div class="glyph">🧡</div><div class="lbl">Hermès Sèvres</div></div></div>
+            <div class="body">
+              <h3>Hermès — rue de Sèvres</h3>
+              <div class="meta"><span class="pill optional">The pool building</span></div>
+              <p>The Left Bank Hermès flagship inside the former Lutetia swimming pool — worth it for the architecture alone, steps from Bon Marché.</p>
+              <p class="line"><b>Map</b><a href="https://www.google.com/maps/search/?api=1&query=Hermes%2017%20rue%20de%20S%C3%A8vres%20Paris" target="_blank">17 rue de Sèvres</a></p>
+            </div>
+          </div>
+          <div class="item">
+            <div class="media noimg g-glass"><div class="ph"><div class="glyph">🎨</div><div class="lbl">Sennelier</div></div></div>
+            <div class="body">
+              <h3>Sennelier — art supplies</h3>
+              <div class="meta"><span class="pill optional">Since 1887</span></div>
+              <p>The historic art-supply house on quai Voltaire, where Cézanne and Picasso shopped — pigments, pastels, papers. A short riverside walk from the shops.</p>
+              <p class="line"><b>Map</b><a href="https://www.google.com/maps/search/?api=1&query=Sennelier%20quai%20Voltaire%20Paris" target="_blank">3 quai Voltaire</a></p>
+            </div>
+          </div>
+        </div>
+
+        <div class="block">
+          <div class="block-head"><span class="pod">Lunch<span class="clock">· flexible</span></span></div>
+          <div class="item">
+            <div class="media"><img loading="lazy" src="https://upload.wikimedia.org/wikipedia/commons/thumb/6/60/Sushi_platter.jpg/1280px-Sushi_platter.jpg" alt="Sushi" data-g="g-boat" data-glyph="🍣" data-lbl="Lunch shortlist"></div>
+            <div class="body">
+              <h3>Pick on the day (Left Bank)</h3>
+              <div class="meta"><span class="pill flex">No reservation</span></div>
+              <p><strong>Hando</strong> (handroll sushi, right by Bon Marché) · <strong>Café de Flore</strong> (coffee/lunch, the vibe) · <strong>Brasserie des Prés</strong> · or graze the <strong>Grande Épicerie</strong> hall.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="block">
+          <div class="block-head"><span class="pod">Evening</span></div>
+          <div class="item">
+            <div class="media"><img loading="lazy" src="https://upload.wikimedia.org/wikipedia/commons/9/92/Spaghettoni.jpg" alt="Pasta" data-g="g-boat" data-glyph="🍝" data-lbl="Le Monteverdi"></div>
+            <div class="body">
+              <h3>Le Monteverdi</h3>
+              <div class="meta"><span class="pill book">Book</span><span>St-Germain (6th)</span><span>Italian · pianist</span></div>
+              <p>A warm, romantic old-school Italian with a live pianist and proper pasta — a charming close to the Left Bank day.</p>
+              <p class="line"><b>Dress</b>Smart-casual; intimate and a little romantic.</p>
+              <p class="line"><b>Map</b><a href="https://www.google.com/maps/search/?api=1&query=Le%20Monteverdi%20Paris%20rue%20Guisarde" target="_blank">5 rue Guisarde</a></p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <aside class="day-map"><div id="mapMon" class="lmap"></div><div class="maphint">Pins are approximate — tap a card's Map link for the exact address.</div></aside>
+    </div>
+  </section>
+
+  <!-- ============ TUE ============ -->
+  <section class="day" id="d11">
+    <div class="day-head"><span class="num">Day 5</span><h2>August 11</h2><span class="dow">Tuesday · Avenue Montaigne, then they fly</span></div>
+    <p class="day-summary">Hermès and Dior in the Golden Triangle, a sushi lunch, then Sara &amp; Etta to the airport (~5pm flight).</p>
+    <div class="day-grid">
+      <div class="day-main">
+        <div class="block">
+          <div class="block-head"><span class="pod">Morning<span class="clock">· Golden Triangle (8th)</span></span></div>
+          <div class="item">
+            <div class="media"><img loading="lazy" src="https://upload.wikimedia.org/wikipedia/commons/thumb/3/33/Plaza_Ath%C3%A9n%C3%A9e_1.jpg/1280px-Plaza_Ath%C3%A9n%C3%A9e_1.jpg" alt="Avenue Montaigne" data-g="g-mask" data-glyph="👗" data-lbl="Dior · Montaigne"></div>
+            <div class="body">
+              <h3>Dior flagship &amp; Avenue Montaigne</h3>
+              <div class="meta"><span class="pill optional">Coffee at Café Dior</span></div>
+              <p>30 Avenue Montaigne — the restored Dior flagship, with coffee and pastry at Café Dior. Wander the Golden Triangle (Montaigne / George V / Champs).</p>
+              <p class="line"><b>Map</b><a href="https://www.google.com/maps/search/?api=1&query=Dior%2030%20Avenue%20Montaigne%20Paris" target="_blank">30 Avenue Montaigne</a></p>
+            </div>
+          </div>
+          <div class="item">
+            <div class="media"><img loading="lazy" src="https://upload.wikimedia.org/wikipedia/commons/thumb/2/25/Rue_du_Faubourg-Saint-Honor%C3%A9%2C_Paris_May_2006.jpg/1280px-Rue_du_Faubourg-Saint-Honor%C3%A9%2C_Paris_May_2006.jpg" alt="Rue du Faubourg Saint-Honoré" data-g="g-ghetto" data-glyph="🧡" data-lbl="Hermès FSH"></div>
+            <div class="body">
+              <h3>Hermès — Faubourg Saint-Honoré</h3>
+              <div class="meta"><span class="pill optional">The historic flagship</span></div>
+              <p>The original Hermès house at 24 Faubourg Saint-Honoré, a short walk from Montaigne — the mothership.</p>
+              <p class="line"><b>Map</b><a href="https://www.google.com/maps/search/?api=1&query=Hermes%2024%20Faubourg%20Saint-Honor%C3%A9%20Paris" target="_blank">24 Faubourg Saint-Honoré</a></p>
+            </div>
+          </div>
+        </div>
+
+        <div class="block">
+          <div class="block-head"><span class="pod">Lunch<span class="clock">· then airport ~2:30–3</span></span></div>
+          <div class="item">
+            <div class="media"><img loading="lazy" src="https://upload.wikimedia.org/wikipedia/commons/thumb/6/60/Sushi_platter.jpg/1280px-Sushi_platter.jpg" alt="Sushi" data-g="g-boat" data-glyph="🍣" data-lbl="Miss Ko"></div>
+            <div class="body">
+              <h3>Miss Ko — lunch</h3>
+              <div class="meta"><span class="pill optional">Reserve to be safe</span><span>8th, near Montaigne</span><span>sushi</span></div>
+              <p>A Starck-designed Asian spot near Montaigne — sushi and Pan-Asian. Walk-in is usually fine at a weekday lunch, but with the flight to catch it's worth reserving.</p>
+              <p class="line"><b>Dress</b>Smart-casual; trendy and loud.</p>
+              <p class="line"><b>Map</b><a href="https://www.google.com/maps/search/?api=1&query=Miss%20Ko%20Paris" target="_blank">Miss Ko</a></p>
+            </div>
+          </div>
+          <div class="item">
+            <div class="media noimg g-train"><div class="ph"><div class="glyph">✈️</div><div class="lbl">Airport</div></div></div>
+            <div class="body">
+              <h3>Sara &amp; Etta → airport</h3>
+              <div class="meta"><span class="pill transit">~2:30–3:00 PM</span><span>flight ~5:00 PM</span></div>
+              <p>Leave in time for the 5pm flight. Mims's solo home-design days begin after they go.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <aside class="day-map"><div id="mapTue" class="lmap"></div><div class="maphint">Pins are approximate — tap a card's Map link for the exact address.</div></aside>
+    </div>
+  </section>
+
+  <!-- ============ VINTAGE MAP ============ -->
+  <section id="vintage" style="margin:26px 0 40px;">
+    <div class="day-head"><span class="num">Shopping map</span><h2>Vintage &amp; consignment</h2></div>
+    <p class="day-summary">Every vintage/consignment shop on the list, plotted — most cluster in the Haut-Marais (3rd), so it pairs naturally with the Sunday Marais day; a few sit on the Left Bank and in the 8th.</p>
+    <div id="mapVintage" class="lmap" style="height:560px;"></div>
+    <div class="maphint">Pins are geocoded to each address. Two names still unresolved — Duo and Curated By — send a street and I'll add them.</div>
+  </section>
+
+</div>
+
+<footer>
+  <div>A living plan — Paris, Aug 7–11, with Sara &amp; Etta. <em>Book</em> = reserve ahead; <em>Flexible</em> = pick on the day.</div>
+  <div class="updated">Draft · photos in progress · maps live in a browser</div>
+</footer>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+  var HOTEL = [48.8688, 2.3312];
+  function buildMap(id, pts, opts){
+    opts = opts || {};
+    try{
+      var map = L.map(id, {scrollWheelZoom:false});
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+        {maxZoom:19, attribution:'© OpenStreetMap'}).addTo(map);
+      var group = [];
+      // hotel marker (subtle)
+      var hotel = L.circleMarker(HOTEL, {radius:6, color:'#b08a3e', fillColor:'#b08a3e', fillOpacity:1})
+        .bindPopup('<b>Park Hyatt</b> (hotel)').addTo(map);
+      group.push(HOTEL);
+      pts.forEach(function(p){
+        L.marker([p[0], p[1]]).bindPopup('<b>'+p[2]+'</b>').addTo(map);
+        group.push([p[0], p[1]]);
+      });
+      if(opts.center){ map.setView(opts.center, opts.zoom||15); }
+      else { map.fitBounds(group, {padding:[30,30]}); }
+    }catch(e){}
+  }
+  window.addEventListener('load', function(){
+    buildMap('mapFri', [
+      [48.86728,2.33816,'Bibliothèque Richelieu'],
+      [48.86673,2.33976,'Galerie Vivienne'],
+      [48.86379,2.34281,'E. Dehillerin'],
+      [48.86776,2.34787,'Rue du Nil'],
+      [48.86521,2.34682,'Stohrer'],
+      [48.86618,2.33627,'Kunitoraya'],
+      [48.86411,2.33377,'Café Verlet'],
+      [48.86653,2.33911,'Le Grand Colbert'],
+      [48.87125,2.34177,'Racines'],
+      [48.87389,2.32905,'Printemps / Galeries Lafayette (optional)']
+    ]);
+    buildMap('mapSat', [
+      [48.86694,2.32350,'Le Cordon Bleu — Hôtel de la Marine'],
+      [48.90370,2.33949,'Puces de Saint-Ouen (Paul Bert Serpette)'],
+      [48.90374,2.33932,'Ma Cocotte'],
+      [48.85912,2.33031,'Le Voltaire (dinner)']
+    ]);
+    buildMap('mapSun', [
+      [48.86585,2.34993,'Tekés (brunch)'],
+      [48.86126,2.35878,'Musée de la Chasse et de la Nature'],
+      [48.85508,2.36166,'Musée Carnavalet'],
+      [48.85987,2.36212,'Musée Picasso'],
+      [48.86464,2.36152,'The Broken Arm (vintage)'],
+      [48.85616,2.35730,'BHV'],
+      [48.85560,2.36225,'Sandro outlet — rue de Sévigné (approx.)'],
+      [48.87119,2.31186,'Kavod — dinner (8th)']
+    ]);
+    buildMap('mapMon', [
+      [48.85047,2.32442,'Le Bon Marché'],
+      [48.84997,2.32330,'La Grande Épicerie'],
+      [48.85162,2.32783,'Hermès — rue de Sèvres'],
+      [48.84921,2.32224,'Hando (lunch)'],
+      [48.85813,2.33260,'Sennelier'],
+      [48.85413,2.33255,'Café de Flore'],
+      [48.85380,2.33124,'Brasserie des Prés'],
+      [48.85189,2.33490,'Le Monteverdi (dinner)']
+    ]);
+    buildMap('mapTue', [
+      [48.86669,2.30612,'Dior — 30 Avenue Montaigne'],
+      [48.86887,2.32172,'Hermès — 24 Faubourg Saint-Honoré'],
+      [48.87089,2.30065,'Miss Ko (lunch)']
+    ]);
+    buildMap('mapVintage', [
+      [48.86464,2.36152,'The Broken Arm — 12 rue Perrée (3e)'],
+      [48.86355,2.36243,'At Dawn — 13 rue de Picardie (3e)'],
+      [48.86537,2.36207,'Chez Snow Bunny — 12 rue Dupetit-Thouars (3e)'],
+      [48.85951,2.36444,'The Room — 71 rue de Turenne (3e)'],
+      [48.86304,2.36476,'Predilection — 112 rue de Turenne (3e)'],
+      [48.86364,2.36413,'Second Season — 8 rue de Normandie (4e)'],
+      [48.86017,2.36531,'The Parisian Vintage — 20 rue Saint-Claude (3e)'],
+      [48.86736,2.35952,'Pleasure Paris — 30 rue Notre-Dame de Nazareth (3e)'],
+      [48.86195,2.36584,'Revoir Vintage — 12 rue Commines (3e)'],
+      [48.86103,2.36644,'Numéro 13 — 5 rue du Pont aux Choux (3e)'],
+      [48.86935,2.36043,"Thank God I'm a VIP — 12 rue de Lancry (10e)"],
+      [48.86486,2.34566,'Kiliwatch — 64 rue Tiquetonne (2e)'],
+      [48.86673,2.33976,'La Marelle — Galerie Vivienne (2e)'],
+      [48.87091,2.31680,'LuxSpace — 90 rue du Faubourg Saint-Honoré (8e)'],
+      [48.87119,2.31732,'Valois Vintage — rue des Saussaies (8e)'],
+      [48.85773,2.30427,'CornerLuxe — 45 avenue Bosquet (7e)'],
+      [48.85739,2.33523,'Preclothed — 3 rue Bonaparte (6e)'],
+      [48.86733,2.34703,'Bobby — 89 rue Réaumur (2e)'],
+      [48.86946,2.29164,'ReSee — 48bis avenue Kléber (16e)'],
+      [48.86524,2.33117,'Timeless Pearly — 211 rue Saint-Honoré (1er)']
+    ]);
+  });
+
+  // photo fallback (for when real images are added later)
+  document.querySelectorAll('.media img[data-g]').forEach(function(img){
+    img.addEventListener('error', function(){
+      var m = img.closest('.media'); var d = img.dataset;
+      m.classList.add('noimg', d.g);
+      m.innerHTML = '<div class="ph"><div class="glyph">' + d.glyph + '</div><div class="lbl">' + d.lbl + '</div></div>';
+    });
+  });
+</script>
+
+</body>
+</html>
